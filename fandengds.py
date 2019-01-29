@@ -13,6 +13,9 @@ import sys
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 # import pymongo
 import pymysql
+from DBUtils.PooledDB import PooledDB
+
+from dbConnection.MySqlConn import MyPymysqlPool
 
 url = "http://dushu.fandengds.com/cy/index.html"
 global mydb
@@ -45,20 +48,36 @@ def parseContent(content):
             book["intro"] = book_intro.text
             books.append(book)
     # saveToMongoDB(books)
+    saveToMySQL(books)
     # updateBookInfo("联盟", "盟联")
-    # createTable()
 
-#
-# def createTable():
-#     cursor.execute("DROP TABLE IF EXISTS BOOK")
-#     # 使用预处理语句创建表
-#     sql = """CREATE TABLE BOOK (
-#          TITLE  CHAR(255) NOT NULL,
-#          AUTHOR  CHAR(255),
-#          COVER CHAR(255),
-#          NAME CHAR(255),
-#          INTRO CHAR(255) )CREATE TABLE 'BOOK' ('TITLE'  CHAR(255) NOT NULL,  'AUTHOR'  CHAR(255),  'COVER' CHAR(255),  'NAME' CHAR(255),'INTRO' CHAR(255) )""
-#     cursor.execute(sql)
+
+def createTable():
+    cursor.execute("DROP TABLE IF EXISTS BOOK")
+    # 使用预处理语句创建表
+    sql = """
+    CREATE TABLE BOOK (
+         TITLE  CHAR(255) NOT NULL,
+         AUTHOR  CHAR(255),
+         COVER CHAR(255),
+         NAME CHAR(255),
+         INTRO CHAR(255) )
+    """
+    cursor.execute(sql)
+
+
+def saveToMySQL(books):
+    sql = "INSERT INTO BOOK VALUES"
+    for idx, book in enumerate(books):
+        s = " ('" + book["title"] + "', '" + book["author"] + "', '" + book["cover"] + "', '" + book["name"] + "', '" + \
+            book[
+                "intro"] + ("')" if ((len(books) - 1) == idx) else "'),")
+        sql += s
+    try:
+        cursor.execute(sql)
+        mydb.commit()
+    except:
+        mydb.rollback()
 
 
 # MongoDB Operation
@@ -115,13 +134,20 @@ def urllib3Request(scrapy_url):
 
 
 if __name__ == "__main__":
-    mydb = pymysql.connect("localhost", "root", "12345678", "fandengds")
-    cursor = mydb.cursor()
-    cursor.execute("SELECT VERSION()")
-    # 使用 fetchone() 方法获取单条数据.
-    data = cursor.fetchone()
-    print("Database version : %s " % data)
+    # MySQL Operation
+    # mydb = pymysql.connect("localhost", "root", "12345678", "fandengds")
+    # cursor = mydb.cursor()
+    # cursor.execute("SELECT VERSION()")
+    # # 使用 fetchone() 方法获取单条数据.
+    # data = cursor.fetchone()
+    # print("Database version : %s " % data)
+    # createTable()
+
     # MongoDB初始化
     # myclient = pymongo.MongoClient("mongodb://localhost:27017")
     # mydb = myclient["fandengds"]
+
+    mysql = MyPymysqlPool("db")
+    data = mysql.getAll("select *from fandengds.book")
+    print(__pool)
     urllib3Request(url)
